@@ -37,6 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import nitezh.ministock.utils.CryptoSuggestions;
+
 
 /**
  * Provides search suggestions for a list of words and their definitions.
@@ -100,7 +102,15 @@ public class SymbolProvider extends ContentProvider {
 
     private Cursor getSuggestions(String query) {
         query = query == null ? "" : query.toLowerCase().trim();
-        List<Map<String, String>> suggestions = StockSuggestions.getSuggestions(query);
+
+        List<Map<String, String>> suggestions = null;
+
+        if (query.startsWith("$")) {
+            query = query.substring(1);
+            suggestions = CryptoSuggestions.getSuggestions(query);
+        }
+        else
+            suggestions = StockSuggestions.getSuggestions(query);
 
         // Check whether an exact match is found in the symbol
         if (!query.equals("")) {

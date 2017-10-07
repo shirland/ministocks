@@ -39,6 +39,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import nitezh.ministock.Storage;
+import nitezh.ministock.dataaccess.CoinMarketcapQuoteRepository;
 import nitezh.ministock.dataaccess.FxChangeRepository;
 import nitezh.ministock.dataaccess.GoogleStockQuoteRepository;
 import nitezh.ministock.dataaccess.YahooStockQuoteRepository;
@@ -57,6 +58,7 @@ public class StockQuoteRepository {
     private static HashMap<String, StockQuote> mCachedQuotes;
     private final YahooStockQuoteRepository yahooRepository;
     private final GoogleStockQuoteRepository googleRepository;
+    private final CoinMarketcapQuoteRepository coinMarketcapRepository;
 
     private final Storage appStorage;
     private final Cache appCache;
@@ -65,6 +67,7 @@ public class StockQuoteRepository {
     public StockQuoteRepository(Storage appStorage, Cache appCache, WidgetRepository widgetRepository) {
         this.yahooRepository = new YahooStockQuoteRepository(new FxChangeRepository());
         this.googleRepository = new GoogleStockQuoteRepository();
+        this.coinMarketcapRepository= new CoinMarketcapQuoteRepository();
         this.appStorage = appStorage;
         this.appCache = appCache;
         this.widgetRepository = widgetRepository;
@@ -76,16 +79,30 @@ public class StockQuoteRepository {
         symbols = this.convertRequestSymbols(symbols);
         List<String> yahooSymbols = new ArrayList<>(symbols);
         List<String> googleSymbols = new ArrayList<>(symbols);
+        List<String> coinMarketCapSymbols = getCryptoCurrencies(symbols);
         yahooSymbols.removeAll(GOOGLE_SYMBOLS.keySet());
         googleSymbols.retainAll(GOOGLE_SYMBOLS.keySet());
 
         HashMap<String, StockQuote> yahooQuotes = this.yahooRepository.getQuotes(this.appCache, yahooSymbols);
         HashMap<String, StockQuote> googleQuotes = this.googleRepository.getQuotes(this.appCache, googleSymbols);
+        HashMap<String, StockQuote> coinMarketCapQuotes = this.coinMarketcapRepository.getQuotes(this.appCache, coinMarketCapSymbols);
+
         if (yahooQuotes != null) allQuotes.putAll(yahooQuotes);
         if (googleQuotes != null) allQuotes.putAll(googleQuotes);
+        if (coinMarketCapQuotes != null) allQuotes.putAll(coinMarketCapQuotes);
         allQuotes = this.convertResponseQuotes(allQuotes);
 
         return allQuotes;
+    }
+
+    private List<String> getCryptoCurrencies(List<String> symbols) {
+        List<String> ret = new ArrayList<String>();
+
+        for (String symbol : symbols){
+            if ( symbol.startsWith("$"))
+                ret.add(symbol);
+        }
+        return ret;
     }
 
     private HashMap<String, StockQuote> convertResponseQuotes(HashMap<String, StockQuote> quotes) {

@@ -33,7 +33,7 @@
         <PreferenceScreen
             android:key="stock_setup"
             android:summary="Setup the stocks for this widget"
-            android:title="Stocks setup">
+            android:title="Stock and Cryptocurreny setup">
             <Preference
                 android:defaultValue="^DJI"
                 android:key="Stock1"
