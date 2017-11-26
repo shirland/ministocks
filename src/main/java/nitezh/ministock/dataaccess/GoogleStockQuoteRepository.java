@@ -28,69 +28,105 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
+import nitezh.ministock.domain.StockQuote;
 import nitezh.ministock.utils.Cache;
 import nitezh.ministock.utils.UrlDataTools;
-import nitezh.ministock.domain.StockQuote;
 
 
 public class GoogleStockQuoteRepository {
 
     private static final String BASE_URL = "http://finance.google.com/finance?output=json&q=";
 
-    public HashMap<String, StockQuote> getQuotes(Cache cache, List<String> symbols) {
+    public synchronized HashMap<String, StockQuote> getQuotes(Cache cache, List<String> symbols) {
         HashMap<String, StockQuote> quotes = new HashMap<>();
         JSONArray jsonArray;
         JSONObject quoteJson;
 
         for (String symbol : symbols) {
             try {
-                jsonArray = this.retrieveQuotesAsJson(cache, Collections.singletonList(symbol));
+                jsonArray = this.retrieveQuotesAsJson(cache, symbol);
 
                 for (int i = 0; i < jsonArray.length(); i++) {
                     quoteJson = jsonArray.getJSONObject(i);
-                    StockQuote quote = new StockQuote(
-                            quoteJson.optString("t"),
-                            quoteJson.optString("l_cur", quoteJson.optString("l")).replace(",", ""),
-                            quoteJson.optString("c"),
-                            quoteJson.optString("cp"),
-                            quoteJson.optString("e").replace("INDEX", ""),
-                            "0",
-                            quoteJson.optString("e"),
-                            Locale.US);
+                    StockQuote quote = null;
+                    if (!(symbol.length() == 5 & symbol.endsWith("X"))) {
+                        quote = new StockQuote(
+                                quoteJson.optString("t"),
+                                quoteJson.optString("l_cur", quoteJson.optString("l")).replace(",", ""),
+                                quoteJson.optString("c"),
+                                quoteJson.optString("cp"),
+                                quoteJson.optString("e").replace("INDEX", ""),
+                                quoteJson.optString("vo"),
+                                quoteJson.optString("name"),
+                                Locale.US);
+
+                    } else { //mutual fund
+                        quote = new StockQuote(
+                                quoteJson.optString("t"),
+                                quoteJson.optString("nav_prior"),
+                                quoteJson.optString("nav_c"),
+                                quoteJson.optString("nav_cp"),
+                                quoteJson.optString("e"),
+                                quoteJson.optString("vo"),
+                                quoteJson.optString("name"),
+                                Locale.US);
+                    }
                     quotes.put(quote.getSymbol(), quote);
                 }
             } catch (JSONException e) {
+                e.printStackTrace();
             }
         }
 
         return quotes;
     }
 
-    private String buildRequestUrl(List<String> symbols) {
-        StringBuilder sQuery = new StringBuilder();
-        for (String s : symbols) {
-            if (!s.equals("")) {
-                if (!sQuery.toString().equals("")) {
-                    sQuery.append(",");
-                }
-                sQuery.append(s);
-            }
-        }
-        return String.format("%s%s", BASE_URL, sQuery);
+    private String buildRequestUrl(String symbol) {
+
+        return String.format("%s%s", BASE_URL, symbol);
     }
 
-    JSONArray retrieveQuotesAsJson(Cache cache, List<String> symbols) throws JSONException {
-        String url = this.buildRequestUrl(symbols);
+    JSONArray retrieveQuotesAsJson(Cache cache, String symbol) throws JSONException {
+        String url = this.buildRequestUrl(symbol);
         String data = UrlDataTools.getCachedUrlData(url, cache, 300);
         String json = data.replace("//", "").replaceAll("\\\\", "");
 
-        return new JSONArray(json);
+        symbol = (symbol.contains(":")) ? symbol.split(":")[1] : symbol;
+        //JSONObject raw = new JSONObject(json);
+
+        //JSONArray vagueList = raw.getJSONArray("searchresults");
+
+        //mutual fund response ...
+        // Provided Android JSON libs don't support the response without these fixes
+
+        if (symbol.length() == 5 && symbol.endsWith("X")){
+            json=json.replace("\"Convertibles\",","\"Conv\"");
+            json=json.replace("\"Corporate Bond\",","\"Corps\"");
+
+            int problemIdx = json.indexOf("topholdings") - 11;
+            String tmpString = json.substring(problemIdx);
+            tmpString = tmpString.replaceFirst(",","");
+            tmpString = json.substring(0,problemIdx) + tmpString;
+            json = tmpString;
+
+        }
+        JSONArray ret;
+        try {
+            ret = new JSONArray(json);
+            return ret;
+        }catch (Exception e){
+            JSONObject obj = new JSONObject(json);
+            JSONArray arr = (JSONArray) new JSONObject(json).get("searchresults");
+
+            //fuzzy quote response retry with exchange
+            String exchange = json.substring(json.indexOf("\"ticker\" : " +"\"" + symbol )).split(":")[2].split("\n")[0].replace("\"","").replace(",","").trim();
+            return retrieveQuotesAsJson(cache,exchange + ":" + symbol);
+
+        }
     }
 }

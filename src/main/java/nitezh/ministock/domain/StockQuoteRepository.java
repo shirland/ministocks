@@ -41,8 +41,10 @@ import java.util.Set;
 import nitezh.ministock.Storage;
 import nitezh.ministock.dataaccess.CoinMarketcapQuoteRepository;
 import nitezh.ministock.dataaccess.FxChangeRepository;
+import nitezh.ministock.dataaccess.GoogleIndexQuoteRepository;
 import nitezh.ministock.dataaccess.GoogleStockQuoteRepository;
 import nitezh.ministock.dataaccess.YahooStockQuoteRepository;
+import nitezh.ministock.dataaccess.AlphaVantageQuoteRepository;
 import nitezh.ministock.utils.Cache;
 
 
@@ -57,8 +59,10 @@ public class StockQuoteRepository {
     private static String mTimeStamp;
     private static HashMap<String, StockQuote> mCachedQuotes;
     private final YahooStockQuoteRepository yahooRepository;
-    private final GoogleStockQuoteRepository googleRepository;
+    private final GoogleIndexQuoteRepository googleIndexRepository;
+    private final GoogleStockQuoteRepository googleStockRepository;
     private final CoinMarketcapQuoteRepository coinMarketcapRepository;
+    private final AlphaVantageQuoteRepository alphaVantageQuoteRepository;
 
     private final Storage appStorage;
     private final Cache appCache;
@@ -66,8 +70,10 @@ public class StockQuoteRepository {
 
     public StockQuoteRepository(Storage appStorage, Cache appCache, WidgetRepository widgetRepository) {
         this.yahooRepository = new YahooStockQuoteRepository(new FxChangeRepository());
-        this.googleRepository = new GoogleStockQuoteRepository();
+        this.googleIndexRepository = new GoogleIndexQuoteRepository();
+        this.googleStockRepository = new GoogleStockQuoteRepository();
         this.coinMarketcapRepository= new CoinMarketcapQuoteRepository();
+        this.alphaVantageQuoteRepository= new AlphaVantageQuoteRepository(new FxChangeRepository());
         this.appStorage = appStorage;
         this.appCache = appCache;
         this.widgetRepository = widgetRepository;
@@ -78,17 +84,24 @@ public class StockQuoteRepository {
 
         symbols = this.convertRequestSymbols(symbols);
         List<String> yahooSymbols = new ArrayList<>(symbols);
-        List<String> googleSymbols = new ArrayList<>(symbols);
+        List<String> googleStockSymbols = new ArrayList<>(symbols);
+        List<String> googleIndexSymbols = new ArrayList<>(symbols);
         List<String> coinMarketCapSymbols = getCryptoCurrencies(symbols);
-        yahooSymbols.removeAll(GOOGLE_SYMBOLS.keySet());
-        googleSymbols.retainAll(GOOGLE_SYMBOLS.keySet());
 
-        HashMap<String, StockQuote> yahooQuotes = this.yahooRepository.getQuotes(this.appCache, yahooSymbols);
-        HashMap<String, StockQuote> googleQuotes = this.googleRepository.getQuotes(this.appCache, googleSymbols);
+        yahooSymbols.removeAll(getCryptoCurrencies(symbols));
+        yahooSymbols.removeAll(GOOGLE_SYMBOLS.keySet());
+        googleIndexSymbols.retainAll(GOOGLE_SYMBOLS.keySet());
+        googleStockSymbols = yahooSymbols;
+
+
+        //HashMap<String, StockQuote> yahooQuotes = this.yahooRepository.getQuotes(this.appCache, yahooSymbols);
+        //HashMap<String, StockQuote> alphaVantageQuotes = this.alphaVantageQuoteRepository.getQuotes(this.appCache, yahooSymbols);
+        HashMap<String, StockQuote> googleStockQuotes = this.googleStockRepository.getQuotes(this.appCache, googleStockSymbols);
+        HashMap<String, StockQuote> googleIndexQuotes = this.googleIndexRepository.getQuotes(this.appCache, googleIndexSymbols);
         HashMap<String, StockQuote> coinMarketCapQuotes = this.coinMarketcapRepository.getQuotes(this.appCache, coinMarketCapSymbols);
 
-        if (yahooQuotes != null) allQuotes.putAll(yahooQuotes);
-        if (googleQuotes != null) allQuotes.putAll(googleQuotes);
+        if (googleStockQuotes != null) allQuotes.putAll(googleStockQuotes);
+        if (googleIndexQuotes != null) allQuotes.putAll(googleIndexQuotes);
         if (coinMarketCapQuotes != null) allQuotes.putAll(coinMarketCapQuotes);
         allQuotes = this.convertResponseQuotes(allQuotes);
 
