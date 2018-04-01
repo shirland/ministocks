@@ -37,7 +37,7 @@
             android:adjustViewBounds="false"
             android:contentDescription="Widget Background"
             android:scaleType="fitXY"
-            android:src="@+drawable/ministock_bg"/>
+            android:src="@drawable/ministock_bg"/>
 
     <LinearLayout
             android:layout_width="fill_parent"

@@ -39,6 +39,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import nitezh.ministock.Storage;
+import nitezh.ministock.dataaccess.CNBCQuoteRepository;
 import nitezh.ministock.dataaccess.CoinMarketcapQuoteRepository;
 import nitezh.ministock.dataaccess.FxChangeRepository;
 import nitezh.ministock.dataaccess.GoogleIndexQuoteRepository;
@@ -60,18 +61,20 @@ public class StockQuoteRepository {
     private static HashMap<String, StockQuote> mCachedQuotes;
     private final YahooStockQuoteRepository yahooRepository;
     private final GoogleIndexQuoteRepository googleIndexRepository;
-    private final GoogleStockQuoteRepository googleStockRepository;
+    //private final GoogleStockQuoteRepository googleStockRepository;
     private final CoinMarketcapQuoteRepository coinMarketcapRepository;
     private final AlphaVantageQuoteRepository alphaVantageQuoteRepository;
+    private final CNBCQuoteRepository cnbcStockRepository;
 
     private final Storage appStorage;
     private final Cache appCache;
     private final WidgetRepository widgetRepository;
 
+
     public StockQuoteRepository(Storage appStorage, Cache appCache, WidgetRepository widgetRepository) {
         this.yahooRepository = new YahooStockQuoteRepository(new FxChangeRepository());
         this.googleIndexRepository = new GoogleIndexQuoteRepository();
-        this.googleStockRepository = new GoogleStockQuoteRepository();
+        this.cnbcStockRepository = new CNBCQuoteRepository();
         this.coinMarketcapRepository= new CoinMarketcapQuoteRepository();
         this.alphaVantageQuoteRepository= new AlphaVantageQuoteRepository(new FxChangeRepository());
         this.appStorage = appStorage;
@@ -96,7 +99,8 @@ public class StockQuoteRepository {
 
         //HashMap<String, StockQuote> yahooQuotes = this.yahooRepository.getQuotes(this.appCache, yahooSymbols);
         //HashMap<String, StockQuote> alphaVantageQuotes = this.alphaVantageQuoteRepository.getQuotes(this.appCache, yahooSymbols);
-        HashMap<String, StockQuote> googleStockQuotes = this.googleStockRepository.getQuotes(this.appCache, googleStockSymbols);
+        HashMap<String, StockQuote> googleStockQuotes = this.cnbcStockRepository.getQuotes(this.appCache, googleStockSymbols);
+        //googleStockQuotes.enrichSymbols(this.widgetRepository);
         HashMap<String, StockQuote> googleIndexQuotes = this.googleIndexRepository.getQuotes(this.appCache, googleIndexSymbols);
         HashMap<String, StockQuote> coinMarketCapQuotes = this.coinMarketcapRepository.getQuotes(this.appCache, coinMarketCapSymbols);
 

@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 
 import nitezh.ministock.domain.StockQuote;
+import nitezh.ministock.domain.WidgetRepository;
 import nitezh.ministock.utils.Cache;
 import nitezh.ministock.utils.UrlDataTools;
 
@@ -41,6 +42,12 @@ import nitezh.ministock.utils.UrlDataTools;
 public class GoogleStockQuoteRepository {
 
     private static final String BASE_URL = "http://finance.google.com/finance?output=json&q=";
+    private static WidgetRepository widgetRepository;
+    
+
+    private void enrichSymbols(final WidgetRepository widgetRepository){
+
+    }
 
     public synchronized HashMap<String, StockQuote> getQuotes(Cache cache, List<String> symbols) {
         HashMap<String, StockQuote> quotes = new HashMap<>();
@@ -91,7 +98,12 @@ public class GoogleStockQuoteRepository {
         return String.format("%s%s", BASE_URL, symbol);
     }
 
+    public GoogleStockQuoteRepository(WidgetRepository w){
+        this.widgetRepository = w;
+    }
+
     JSONArray retrieveQuotesAsJson(Cache cache, String symbol) throws JSONException {
+
         String url = this.buildRequestUrl(symbol);
         String data = UrlDataTools.getCachedUrlData(url, cache, 300);
         String json = data.replace("//", "").replaceAll("\\\\", "");
